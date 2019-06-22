@@ -134,6 +134,21 @@ function love.load() --loading function
 		SwapHighscores[tonumber(Number)] = tonumber(Score)
 	end
 	
+	if not love.filesystem.getInfo("HiddenHighscores.txt") then --check if the Highscores.txt exists
+		love.filesystem.write("HiddenHighscores.txt", "1 = "..tostring(0)..";") --if it doesn't. then create it
+		love.filesystem.append("HiddenHighscores.txt", "2 = "..tostring(0)..";")
+		love.filesystem.append("HiddenHighscores.txt", "3 = "..tostring(0)..";")
+		love.filesystem.append("HiddenHighscores.txt", "4 = "..tostring(0)..";")
+		love.filesystem.append("HiddenHighscores.txt", "5 = "..tostring(0)..";")
+	end
+	
+	HiddenHighscores = {}
+	local line = love.filesystem.read("HiddenHighscores.txt") --load highscores from Highscores.txt
+	for l in line:gmatch("%d+ = %d+;") do
+		local Number,Score = l:match("(%d+) = (%d+);")
+		HiddenHighscores[tonumber(Number)] = tonumber(Score)
+	end
+	
 	Soft_Drop = {Timer = 0, Activated = false} --set up timers
 	Move_Left = {Timer = 0, Activated = false}
 	Move_Right = {Timer = 0, Activated = false}
@@ -923,9 +938,12 @@ function WriteScoresToFile() --function that writes highscores to file
 	if CurrentMode == "Standard" then
 		HighscoresText = "Highscores.txt"
 		HighscoresTable = Highscores
-	else
+	elseif CurrentMode == "Swap" then
 		HighscoresText = "SwapHighscores.txt"
 		HighscoresTable = SwapHighscores
+	else
+		HighscoresText = "HiddenHighscores.txt"
+		HighscoresTable = HiddenHighscores
 	end
 	
 	love.filesystem.write(HighscoresText, "1 = "..tostring(HighscoresTable[1])..";") --score 1
@@ -940,8 +958,10 @@ function SubmitCurrentScore() --adds the current score to the list, and saves it
 	local HighscoresTable = false
 	if CurrentMode == "Standard" then
 		HighscoresTable = Highscores
-	else
+	elseif CurrentMode == "Swap" then
 		HighscoresTable = SwapHighscores
+	else
+		HighscoresTable = HiddenHighscores
 	end
 	
 	table.insert(HighscoresTable, ScoreAmount) --insert the current score into the Highscores table
@@ -1026,7 +1046,7 @@ function love.update(dt) --Update Function
 		UpComming = {} --reset UpComming
 		
 		Prohibit = true --set up prohibiter
-	elseif love.keyboard.isDown("return") and Status == "Menu" and CurrentMode == "Standard" and not Prohibit then --if the player presses the enter key while Status is "Menu"
+	elseif love.keyboard.isDown("return") and Status == "Menu" and (CurrentMode == "Standard" or CurrentMode == "Hidden") and not Prohibit then --if the player presses the enter key while Status is "Menu"
 		Status = "Game"
 		SetUpWorld() --reset the world
 		SetActiveMinos(0) --get a new ActiveMinos
@@ -1092,7 +1112,7 @@ function love.draw() --drawing function
 	if not (CurrentMode == "Swap") then
 		for y,Row in pairs(InactiveMinos) do --loop through all lines
 			for x,Minos in pairs(Row) do --loop through all minos in that line
-				if Minos.Image ~= nil and Status ~= "Pause" and Status ~= "Controls" then --check if it is empty
+				if Minos.Image ~= nil and Status ~= "Pause" and Status ~= "Controls" and (not (CurrentMode == "Hidden")) then --check if it is empty
 					love.graphics.draw(Minos.Image, 28 * x + ScreenX, 714 - (28 * y)) --draw the minos
 				else
 					love.graphics.draw(Blank, 28 * x + ScreenX, 714 - (28 * y)) --if the spot is empty, draw the backgrounf sprite
@@ -1215,8 +1235,10 @@ function love.draw() --drawing function
 	local HighscoresTable = false
 	if CurrentMode == "Standard" then
 		HighscoresTable = Highscores
-	else
+	elseif CurrentMode == "Swap" then
 		HighscoresTable = SwapHighscores
+	else
+		HighscoresTable = HiddenHighscores
 	end
 	
 	--draw more text
@@ -1270,6 +1292,13 @@ function love.draw() --drawing function
 			love.graphics.print({{1, 0.5, 0.5}, "Swap"}, 553, 173)
 		else
 			love.graphics.print("Swap", 553, 173)
+		end
+		
+		love.graphics.rectangle("line", 550, 210, 110, 25)
+		if CurrentMode == "Hidden" then
+			love.graphics.print({{1, 0.5, 0.5}, "Hidden"}, 553, 213)
+		else
+			love.graphics.print("Hidden", 553, 213)
 		end
 	end
 	if Status == "Pause" then --if the player is paused
@@ -1471,7 +1500,7 @@ function love.mousepressed(x, y, button, istouch, presses) --function for when p
 			end
 		end
 		
-		if (x > 550 and x < 720) then
+		if (x > 550 and x < 660) then
 			if (y > 130 and y < 155) then
 				if button == 1 then
 					CurrentMode = "Standard"
@@ -1480,6 +1509,11 @@ function love.mousepressed(x, y, button, istouch, presses) --function for when p
 			if (y > 170 and y < 195) then
 				if button == 1 then
 					CurrentMode = "Swap"
+				end
+			end
+			if (y > 210 and y < 235) then
+				if button == 1 then
+					CurrentMode = "Hidden"
 				end
 			end
 		end
