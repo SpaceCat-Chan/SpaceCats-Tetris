@@ -1,0 +1,1 @@
+Rot_Left = z;Rot_Right = c;Soft_Drop = down;Move_Left = left;Move_Right = right;Hard_Drop = x;Hold = up;Swap = s;

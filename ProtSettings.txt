@@ -1,0 +1,1 @@
+Single = 100;Double = 300;Triple = 1200;Tetris = 3200;STetris = 7000;

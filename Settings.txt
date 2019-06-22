@@ -1,0 +1,1 @@
+AutoRepeat_Delay = 170;AutoRepeat_Speed = 50;SRS = true;Pentominos = false;
