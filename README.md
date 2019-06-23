@@ -9,4 +9,4 @@ this is written in Lua and uses Love2D for doing graphics
 
 ### Windows:
 go in the Windows Executable folder and download the zip file,  
-it contains everything
+it contains everything you need
