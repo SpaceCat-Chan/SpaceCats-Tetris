@@ -1195,6 +1195,7 @@ function love.update(dt) --Update Function
 					PuyoWaitState = {}
 				elseif PuyoWaiting == "gravity" then
 					PuyoWaitState = PuyoWorldGravity(0)
+					NewGhostPiece(0)
 					if (CountTable(PuyoWaitState) ~= 0) then
 						PuyoWaiting = "remove"
 						PuyoWaitState = ConvertToNormal(PuyoWaitState)
@@ -1472,6 +1473,7 @@ function love.draw() --drawing function
 				end
 			end
 			
+			
 			love.graphics.line(MainTextX, 400, MainTextX + 150, 400, MainTextX + 150, 250, MainTextX, 250, MainTextX, 400)
 			love.graphics.print("Next:", MainTextX + 3, 250)
 			love.graphics.draw(UpComming.MainPiece.Image, MainTextX + 61, 311) --draw the MainPiece of GhostMinos
@@ -1654,15 +1656,17 @@ function love.keypressed(K) --function for when player presses a button
 			Move_Right.Activated = true
 		end
 		if Controls[K] == "Hard_Drop" then --when Hard_Drop is pressed
-			local State, Pos = false, false
-			repeat
-				State, Pos = MainPieceDown(SwapState)
-			until State --keep moving ActiveMinos down, until it locks
-			if CurrentMode ~= "Puyo" then
-				ClearLines(SwapState)
-			else
-				PuyoWaiting = "remove"
-				PuyoWaitState = Pos
+			if not PuyoWaiting then
+				local State, Pos = false, false
+				repeat
+					State, Pos = MainPieceDown(SwapState)
+				until State --keep moving ActiveMinos down, until it locks
+				if CurrentMode ~= "Puyo" then
+					ClearLines(SwapState)
+				else
+					PuyoWaiting = "remove"
+					PuyoWaitState = Pos
+				end
 			end
 		end
 		if Controls[K] == "Hold" and not HoldLock then
