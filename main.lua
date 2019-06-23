@@ -953,7 +953,7 @@ function AddToTable(Table,Input)
         Table[Input[1]] = {}
         Table[Input[1]][Input[2]] = true
     else
-        Table[Input[1]][Input[2]] = true
+		Table[Input[1]][Input[2]] = true
     end
 end
 
@@ -1176,17 +1176,39 @@ function love.update(dt) --Update Function
 		else
 			if PuyoTimer > tonumber(ProtSettings.TimerBetweenAction) then
 				if PuyoWaiting == "remove" then
+					local OldDetected = {}
 					for k,Remove in ipairs(PuyoWaitState) do
 						local Detected, Length = FindChain(Remove, 0)
 						if Length ~= nil then
 							if Length > tonumber(ProtSettings.ChainLength) then
-								for x,Row in pairs(Detected) do
-									for y,__ in pairs(Row) do
-										InactiveMinos[y][x] = {}
+								
+								local DupeTest = false
+								for k,v in pairs(OldDetected) do
+									for x,Row in pairs(v) do
+										for y,__ in pairs(Row) do
+											if CheckTable(Detected, {x,y}) then
+												DupeTest = true
+											end
+											break
+										end
+										break
+									end
+									if DupeTest then
+										break
 									end
 								end
-								ScoreAmount = ScoreAmount + (Length * Chain * 100 * Level)
-								Chain = Chain + 1
+								
+								if not DupeTest then
+									for x,Row in pairs(Detected) do
+										for y,__ in pairs(Row) do
+											InactiveMinos[y][x] = {}
+										end
+									end
+									ScoreAmount = ScoreAmount + (Length * Chain * 100 * Level)
+									Chain = Chain + 1
+									Score.Singles = Score.Singles + 1
+									OldDetected[#OldDetected + 1] = Detected
+								end
 							end
 						end
 					end
