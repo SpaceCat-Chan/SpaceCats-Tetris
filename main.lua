@@ -149,6 +149,21 @@ function love.load() --loading function
 		HiddenHighscores[tonumber(Number)] = tonumber(Score)
 	end
 	
+	if not love.filesystem.getInfo("PuyoHighscores.txt") then --check if the Highscores.txt exists
+		love.filesystem.write("PuyoHighscores.txt", "1 = "..tostring(0)..";") --if it doesn't. then create it
+		love.filesystem.append("PuyoHighscores.txt", "2 = "..tostring(0)..";")
+		love.filesystem.append("PuyoHighscores.txt", "3 = "..tostring(0)..";")
+		love.filesystem.append("PuyoHighscores.txt", "4 = "..tostring(0)..";")
+		love.filesystem.append("PuyoHighscores.txt", "5 = "..tostring(0)..";")
+	end
+	
+	PuyoHighscores = {}
+	local line = love.filesystem.read("PuyoHighscores.txt") --load highscores from Highscores.txt
+	for l in line:gmatch("%d+ = %d+;") do
+		local Number,Score = l:match("(%d+) = (%d+);")
+		PuyoHighscores[tonumber(Number)] = tonumber(Score)
+	end
+	
 	Soft_Drop = {Timer = 0, Activated = false} --set up timers
 	Move_Left = {Timer = 0, Activated = false}
 	Move_Right = {Timer = 0, Activated = false}
@@ -178,6 +193,11 @@ function love.load() --loading function
 	MovReset = 0 --set up the MovReset Value
 	SwapMovReset = 0
 	
+	PuyoTimer = 0
+	PuyoWaiting = false
+	PuyoWaitState = {}
+	Chain = 1
+	
 	UpComming = {}
 	
 	CurrentMode = "Standard"
@@ -202,7 +222,24 @@ function love.load() --loading function
 		LPieceImage = love.graphics.newImage("Minos/LPieceGhost.png"),
 		JPieceImage = love.graphics.newImage("Minos/JPieceGhost.png"),
 		TPieceImage = love.graphics.newImage("Minos/TPieceGhost.png"),
-		IPieceImage = love.graphics.newImage("Minos/IPieceGhost.png")
+		IPieceImage = love.graphics.newImage("Minos/IPieceGhost.png"),
+		[1] = love.graphics.newImage("Minos/OPieceGhost.png"),
+		[2] = love.graphics.newImage("Minos/SPieceGhost.png"),
+		[3] = love.graphics.newImage("Minos/ZPieceGhost.png"),
+		[4] = love.graphics.newImage("Minos/LPieceGhost.png"),
+		[5] = love.graphics.newImage("Minos/JPieceGhost.png"),
+		[6] = love.graphics.newImage("Minos/TPieceGhost.png"),
+		[7] = love.graphics.newImage("Minos/IPieceGhost.png")
+	}
+	
+	Puyo = { --setting up a table for easier access
+		[1] = love.graphics.newImage("Minos/OPiece.png"), --set up all of the images
+		[2] = love.graphics.newImage("Minos/SPiece.png"),
+		[3] = love.graphics.newImage("Minos/ZPiece.png"),
+		[4] = love.graphics.newImage("Minos/LPiece.png"),
+		[5] = love.graphics.newImage("Minos/JPiece.png"),
+		[6] = love.graphics.newImage("Minos/TPiece.png"),
+		[7] = love.graphics.newImage("Minos/IPiece.png")
 	}
 	
 	Blank = love.graphics.newImage("Minos/Blank.png")
@@ -464,9 +501,9 @@ end
 
 function RotateAroundCenter(Pos,Dir) --rotates a pair of cordinates around the center point (0,0), Dir: False == Clockwise, True == Counter Clockwise
 	if Dir then
-		return {Pos[2] * (-1), Pos[1]}
+		return {Pos[2] * (-1), Pos[1], Image = Pos.Image}
 	else
-		return {Pos[2], Pos[1] * (-1)}
+		return {Pos[2], Pos[1] * (-1), Image = Pos.Image}
 	end
 end
 
@@ -497,10 +534,8 @@ function SetActiveMinos(LocSwapState) --put a random Tetrominos in ActiveMinos
 		else
 			local Num = math.random()
 			if Num > 0.25 then
-				print("Tetrominos")
 				TakeList = CopyList(TetrominoList)
 			else
-				print("PentoMinos")
 				TakeList = CopyList(PentominoList)
 			end
 		end
@@ -520,6 +555,17 @@ function SetActiveMinos(LocSwapState) --put a random Tetrominos in ActiveMinos
 			Final.MainPiece = {6,23} --if it is set the position to a special position
 		else
 			Final.MainPiece = {6,24} --set up position of Tetrominos
+		end
+		
+		if CurrentMode == "Puyo" then
+			local Types = {}
+			for num=1,ProtSettings.MaxPolsInPeice do
+				table.insert(Types, math.random(ProtSettings.Polarities))
+			end
+			for k,Minos in ipairs(Final) do
+				Final[k].Image = Puyo[Types[math.random(ProtSettings.MaxPolsInPeice)]]
+			end
+			Final.MainPiece.Image = Puyo[Types[math.random(ProtSettings.MaxPolsInPeice)]]
 		end
 		
 		if LocSwapState == 0 then
@@ -556,7 +602,12 @@ function CheckOverlap(Pos, LocSwapState) --function to check if a spot is occypi
 			return true --return true
 		end
 		if SWorld[Pos[2]][Pos[1]].Image ~= nil then
-			return true
+			if CurrentMode == "Puyo" then
+				local Type = SWorld[Pos[2]][Pos[1]].Type
+				return true, Type
+			else
+				return true
+			end
 		end
 	else
 		if SWorld[1] == nil then
@@ -653,7 +704,8 @@ function RotateMain(Dir, LocSwapState) --Function that rotates ActiveMinos, Dir:
 			for MinosNum,__ in ipairs(ACMinos) do --rotate all the pieces
 				ACMinos[MinosNum] = RotateAroundCenter(ACMinos[MinosNum], Dir)
 			end
-			ACMinos.MainPiece = {ACMinos.MainPiece[1] + FinalTranslation[1], ACMinos.MainPiece[2] + FinalTranslation[2]} --apply translation to the MainPiece
+			ACMinos.MainPiece[1] = ACMinos.MainPiece[1] + FinalTranslation[1]
+			ACMinos.MainPiece[2] = ACMinos.MainPiece[2] + FinalTranslation[2] --apply translation to the MainPiece
 			ACMinos.CurrentRotation = OffsetNew
 			if LocSwapState == 0 then
 				if MovReset < 10 then --check if MovReset is less than 10
@@ -672,22 +724,50 @@ function RotateMain(Dir, LocSwapState) --Function that rotates ActiveMinos, Dir:
 end
 
 function NewGhostPiece(LocSwapState)
-	local ImagePlaceHolder = false
+	local ImagePlaceHolder, ImageMain, Image1, Image2, Image3 = false, false, false, false, false
 	local GMinos = false
 	
 	if LocSwapState == 0 then
 		ImagePlaceHolder = ActiveMinos.Image
+		if CurrentMode == "Puyo" then
+			ImageMain = ActiveMinos.MainPiece.Image
+			Image1 = ActiveMinos[1].Image
+			Image2 = ActiveMinos[2].Image
+			Image3 = ActiveMinos[3].Image
+		end
 		GhostMinos = DeepCopy(ActiveMinos)
 		GMinos = GhostMinos
 	else
 		ImagePlaceHolder = SwapActiveMinos.Image
+		if CurrentMode == "Puyo" then
+			ImageMain = SwapActiveMinos.MainPiece.Image
+			Image1 = SwapActiveMinos[1].Image
+			Image2 = SwapActiveMinos[2].Image
+			Image3 = SwapActiveMinos[3].Image
+		end
 		SwapGhostMinos = DeepCopy(SwapActiveMinos)
 		GMinos = SwapGhostMinos
 	end
 	
 	GMinos.Image = ImagePlaceHolder
+	if CurrentMode == "Puyo" then
+		GMinos.MainPiece.Image = ImageMain
+		GMinos[1].Image = Image1
+		GMinos[2].Image = Image2
+		GMinos[3].Image = Image3
+	end
 	local Key = FindKey(Images, GMinos.Image)
 	GMinos.Image = Ghost[Key]
+	if CurrentMode == "Puyo" then
+		local Key = FindKey(Puyo, GMinos.MainPiece.Image)
+		GMinos.MainPiece.Image = Ghost[Key]
+		local Key = FindKey(Puyo, GMinos[1].Image)
+		GMinos[1].Image = Ghost[Key]
+		local Key = FindKey(Puyo, GMinos[2].Image)
+		GMinos[2].Image = Ghost[Key]
+		local Key = FindKey(Puyo, GMinos[3].Image)
+		GMinos[3].Image = Ghost[Key]
+	end
 	repeat
 	until GhostPieceDown(LocSwapState)
 end
@@ -754,12 +834,29 @@ function MainPieceDown(LocSwapState) --move ActiveMinos down by one, lock piece 
 			SWorld = SwapInactiveMinos
 		end
 		
-		for k,Minos in ipairs(ACMinos) do --for every non-main Minos in ActiveMinos
-			SWorld[ACMinos.MainPiece[2] + Minos[2]][ACMinos.MainPiece[1] + Minos[1]].Image = ACMinos.Image --copy image to InactiveMinos at the correct location
-			MovTimer = 0 --reset MovTimer
-			MovReset = 0 --reset MovReset
+		local Pos = {}
+		Pos[1] = {ACMinos.MainPiece[1], ACMinos.MainPiece[2]}
+		Pos[2] = {ACMinos[1][1] + ACMinos.MainPiece[1], ACMinos[1][2] + ACMinos.MainPiece[2]}
+		Pos[3] = {ACMinos[2][1] + ACMinos.MainPiece[1], ACMinos[2][2] + ACMinos.MainPiece[2]}
+		Pos[4] = {ACMinos[3][1] + ACMinos.MainPiece[1], ACMinos[3][2] + ACMinos.MainPiece[2]}
+		if ACMinos[4] then
+			Pos[5] = {ACMinos[4][1] + ACMinos.MainPiece[1], ACMinos[4][2] + ACMinos.MainPiece[2]}
 		end
-		SWorld[ACMinos.MainPiece[2]][ACMinos.MainPiece[1]].Image = ACMinos.Image --same as above but for MainPiece
+		
+		for k,Minos in ipairs(ACMinos) do --for every non-main Minos in ActiveMinos
+			if CurrentMode == "Puyo" then
+				SWorld[ACMinos.MainPiece[2] + Minos[2]][ACMinos.MainPiece[1] + Minos[1]].Image = Minos.Image --copy image to InactiveMinos at the correct location
+				SWorld[ACMinos.MainPiece[2] + Minos[2]][ACMinos.MainPiece[1] + Minos[1]].Type = FindKey(Puyo, Minos.Image)
+			else
+				SWorld[ACMinos.MainPiece[2] + Minos[2]][ACMinos.MainPiece[1] + Minos[1]].Image = ACMinos.Image
+			end
+		end
+		if CurrentMode == "Puyo" then
+			SWorld[ACMinos.MainPiece[2]][ACMinos.MainPiece[1]].Image = ACMinos.MainPiece.Image --same as above but for MainPiece
+			SWorld[ACMinos.MainPiece[2]][ACMinos.MainPiece[1]].Type = FindKey(Puyo, ACMinos.MainPiece.Image)
+		else
+			SWorld[ACMinos.MainPiece[2]][ACMinos.MainPiece[1]].Image = ACMinos.Image --same as above but for MainPiece
+		end
 		SetActiveMinos(LocSwapState) --get a new ActiveMinos
 		if LocSwapState == 0 then
 			MovTimer = 0 --reset the MovTimer
@@ -769,7 +866,7 @@ function MainPieceDown(LocSwapState) --move ActiveMinos down by one, lock piece 
 			SwapMovReset = 0
 		end
 		HoldLock = false
-		return true --return true if piece was locked
+		return true, Pos --return true if piece was locked
 	end
 end
 
@@ -808,6 +905,94 @@ function MainPieceSide(Side, LocSwapState) --Side: -1 = left, 1 = right
 			end
 		end
 		NewGhostPiece(LocSwapState)
+	end
+end
+
+function PuyoWorldGravity(LocSwapState)
+	
+	local SWorld = false
+	if LocSwapState == 0 then
+		SWorld = InactiveMinos
+	else
+		SWorld = SwapInactiveMinos
+	end
+	
+	local ListOfChanged = {}
+	
+	for y=2,25 do
+		for x,Minos in pairs(SWorld[y]) do
+			if Minos.Image ~= nil then
+				local CurrentLowest = {x,y}
+				while not (CheckOverlap({CurrentLowest[1], CurrentLowest[2] - 1}, LocSwapState)) do
+					CurrentLowest = {CurrentLowest[1], CurrentLowest[2] - 1}
+				end
+				if CurrentLowest[2] ~= y then
+					SWorld[CurrentLowest[2]][CurrentLowest[1]].Image = Minos.Image
+					SWorld[CurrentLowest[2]][CurrentLowest[1]].Type = Minos.Type
+					SWorld[y][x] = {}
+					AddToTable(ListOfChanged, CurrentLowest)
+				end
+			end
+		end
+	end
+	return ListOfChanged
+end
+
+function ConvertToNormal(Table)
+	Result = {}
+	for x,Row in pairs(Table) do
+		for y,__ in pairs(Row) do
+			table.insert(Result, {x,y})
+		end
+	end
+	return Result
+end
+
+function AddToTable(Table,Input)
+    if Table[Input[1]] == nil then
+        Table[Input[1]] = {}
+        Table[Input[1]][Input[2]] = true
+    else
+        Table[Input[1]][Input[2]] = true
+    end
+end
+
+function CheckTable(Table, Input)
+    if Table[Input[1]] == nil then
+        return false
+    end
+    return Table[Input[1]][Input[2]]
+end
+
+function CountTable(Table)
+	local Count = 0
+	for k,v in pairs(Table) do
+		for kk,vv in pairs(v) do
+			Count = Count + 1
+		end
+	end
+	return Count
+end
+
+function FindChain(Pos, LocSwapState, Table, Type)
+	
+	if not Table then
+		Table = {}
+	end
+	
+	local State, GotType = CheckOverlap(Pos, LocSwapState)
+	if GotType then
+		if (GotType == Type) or (Type == nil) then
+			Type = GotType
+			if not CheckTable(Table, Pos) then
+				AddToTable(Table, Pos)
+				FindChain({Pos[1] - 1, Pos[2]}, LocSwapState, Table, Type)
+				FindChain({Pos[1] + 1, Pos[2]}, LocSwapState, Table, Type)
+				FindChain({Pos[1], Pos[2] - 1}, LocSwapState, Table, Type)
+				FindChain({Pos[1], Pos[2] + 1}, LocSwapState, Table, Type)
+				return Table, CountTable(Table)
+			end
+		end
 	end
 end
 
@@ -941,9 +1126,12 @@ function WriteScoresToFile() --function that writes highscores to file
 	elseif CurrentMode == "Swap" then
 		HighscoresText = "SwapHighscores.txt"
 		HighscoresTable = SwapHighscores
-	else
+	elseif CurrentMode == "Hidden" then
 		HighscoresText = "HiddenHighscores.txt"
 		HighscoresTable = HiddenHighscores
+	else
+		HighscoresText = "PuyoHighscores.txt"
+		HighscoresTable = PuyoHighscores
 	end
 	
 	love.filesystem.write(HighscoresText, "1 = "..tostring(HighscoresTable[1])..";") --score 1
@@ -960,8 +1148,10 @@ function SubmitCurrentScore() --adds the current score to the list, and saves it
 		HighscoresTable = Highscores
 	elseif CurrentMode == "Swap" then
 		HighscoresTable = SwapHighscores
-	else
+	elseif CurrentMode == "Hidden" then
 		HighscoresTable = HiddenHighscores
+	else
+		HighscoresTable = PuyoHighscores
 	end
 	
 	table.insert(HighscoresTable, ScoreAmount) --insert the current score into the Highscores table
@@ -972,14 +1162,52 @@ end
 
 function love.update(dt) --Update Function
 	if Status == "Game" then --check the Status, make sure it is "Game"
-		if MovTimer > ((85.52 * 0.88^Level)/100) then --If the Movement Timer is above the threshold
-			local state = MainPieceDown(0) --Move ActiveMinos down by one
-			if state then --if ActiveMinos was Locked
+		if (MovTimer > ((85.52 * 0.88^Level)/100)) and not (PuyoWaiting) then --If the Movement Timer is above the threshold
+			local state, Pos = MainPieceDown(0) --Move ActiveMinos down by one
+			if state and (CurrentMode ~= "Puyo") then --if ActiveMinos was Locked
 				ClearLines(0) --Clear all the lines
+			elseif state and (CurrentMode == "Puyo") then
+				PuyoWaiting = "remove"
+				PuyoWaitState = Pos
 			end
 			MovTimer = 0 --reset the MovTimer
-		else
+		elseif not PuyoWaiting then
 			MovTimer = MovTimer + dt --if the Movement Timer is not above the threshold, then add dt to it
+		else
+			if PuyoTimer > tonumber(ProtSettings.TimerBetweenAction) then
+				if PuyoWaiting == "remove" then
+					for k,Remove in ipairs(PuyoWaitState) do
+						local Detected, Length = FindChain(Remove, 0)
+						if Length ~= nil then
+							if Length > tonumber(ProtSettings.ChainLength) then
+								for x,Row in pairs(Detected) do
+									for y,__ in pairs(Row) do
+										InactiveMinos[y][x] = {}
+									end
+								end
+								ScoreAmount = ScoreAmount + (Length * Chain * 100 * Level)
+								Chain = Chain + 1
+							end
+						end
+					end
+					PuyoWaiting = "gravity"
+					PuyoTimer = 0
+					PuyoWaitState = {}
+				elseif PuyoWaiting == "gravity" then
+					PuyoWaitState = PuyoWorldGravity(0)
+					if (CountTable(PuyoWaitState) ~= 0) then
+						PuyoWaiting = "remove"
+						PuyoWaitState = ConvertToNormal(PuyoWaitState)
+					else
+						PuyoWaiting = nil
+						Chain = 1
+						PuyoWaitState = {}
+					end
+					PuyoTimer = 0
+				end
+			else
+				PuyoTimer = PuyoTimer + dt * 1000
+			end
 		end
 		if CurrentMode == "Swap" then
 			if SwapMovTimer > ((85.52 * 0.88^Level)/100) then --If the Movement Timer is above the threshold
@@ -992,17 +1220,23 @@ function love.update(dt) --Update Function
 				SwapMovTimer = SwapMovTimer + dt --if the Movement Timer is not above the threshold, then add dt to it
 			end
 		end
-		if Soft_Drop.Activated then --if the Soft_Drop button is being held down
+		if Soft_Drop.Activated and not PuyoWaiting then --if the Soft_Drop button is being held down
 			if Soft_Drop.Timer == 0 then --check if it was just pressed
-				local state = MainPieceDown(SwapState) --if it was just pressed, move ActiveMinos down by one
-				if state then --if ActiveMinos was locked
+				local state, Pos = MainPieceDown(SwapState) --if it was just pressed, move ActiveMinos down by one
+				if state and (CurrentMode ~= "Puyo") then --if ActiveMinos was Locked
 					ClearLines(SwapState) --Clear all the lines
+				elseif state and CurrentMode == "Puyo" then
+					PuyoWaiting = "remove"
+					PuyoWaitState = Pos
 				end
 				Soft_Drop.Timer = Soft_Drop.Timer + (dt * 1000) --add time to the Soft_Drop Timer
 			elseif Soft_Drop.Timer > Settings.AutoRepeat_Delay then --else, if Soft_Drop Timer is more that AutoRepeat_Delay
-				local state = MainPieceDown(SwapState) --move ActiveMinos down by one
-				if state then --if ActiveMinos was locked
+				local state, Pos = MainPieceDown(SwapState) --move ActiveMinos down by one
+				if state and (CurrentMode ~= "Puyo") then --if ActiveMinos was Locked
 					ClearLines(SwapState) --Clear all the lines
+				elseif state and CurrentMode == "Puyo" then
+					PuyoWaiting = "remove"
+					PuyoWaitState = Pos
 				end
 				Soft_Drop.Timer = Settings.AutoRepeat_Delay - Settings.AutoRepeat_Speed --Reset Soft_Drop Timer
 			else
@@ -1046,7 +1280,7 @@ function love.update(dt) --Update Function
 		UpComming = {} --reset UpComming
 		
 		Prohibit = true --set up prohibiter
-	elseif love.keyboard.isDown("return") and Status == "Menu" and (CurrentMode == "Standard" or CurrentMode == "Hidden") and not Prohibit then --if the player presses the enter key while Status is "Menu"
+	elseif love.keyboard.isDown("return") and Status == "Menu" and (CurrentMode == "Standard" or CurrentMode == "Hidden" or CurrentMode == "Puyo") and not Prohibit then --if the player presses the enter key while Status is "Menu"
 		Status = "Game"
 		SetUpWorld() --reset the world
 		SetActiveMinos(0) --get a new ActiveMinos
@@ -1135,7 +1369,7 @@ function love.draw() --drawing function
 				if Minos.Image ~= nil and Status ~= "Pause" and Status ~= "Controls" then --check if it is empty
 					love.graphics.draw(Minos.Image, 28 * x + ScreenX, 714 - (28 * y)) --draw the minos
 				else
-					love.graphics.draw(Blank, 28 * x + ScreenX, 714 - (28 * y)) --if the spot is empty, draw the backgrounf sprite
+					love.graphics.draw(Blank, 28 * x + ScreenX, 714 - (28 * y)) --if the spot is empty, draw the background sprite
 				end
 			end
 		end
@@ -1176,42 +1410,83 @@ function love.draw() --drawing function
 			SideGM = GhostMinos
 		end
 		
-		love.graphics.draw(MainAM.Image, 28 * MainAM.MainPiece[1] + ScreenX, 714 - (28 * MainAM.MainPiece[2])) --draw the MainPiece of ActiveMinos
-		for MinosNum,v in ipairs(MainAM) do --draw all the other Pieces
-			love.graphics.draw(MainAM.Image, 28 * (MainAM[MinosNum][1] + MainAM.MainPiece[1]) + ScreenX, 714 - (28 * (MainAM[MinosNum][2] + MainAM.MainPiece[2])))
-		end
-		
-		love.graphics.draw(MainGM.Image, 28 * MainGM.MainPiece[1] + ScreenX, 714 - (28 * MainGM.MainPiece[2])) --draw the MainPiece of GhostMinos
-		for MinosNum,v in ipairs(MainGM) do --draw all the other Pieces
-			love.graphics.draw(MainGM.Image, 28 * (MainGM[MinosNum][1] + MainGM.MainPiece[1]) + ScreenX, 714 - (28 * (MainGM[MinosNum][2] + MainGM.MainPiece[2])))
-		end
-		
-		if CurrentMode == "Swap" then
-			love.graphics.draw(SideAM.Image, 350 + 14 * SideAM.MainPiece[1] + ScreenX, 567 - (14 * SideAM.MainPiece[2]), 0, 0.5, 0.5) --draw the MainPiece of ActiveMinos
-			for MinosNum,v in ipairs(SideAM) do --draw all the other Pieces
-				love.graphics.draw(SideAM.Image, 350 + 14 * (SideAM[MinosNum][1] + SideAM.MainPiece[1]) + ScreenX, 567 - (14 * (SideAM[MinosNum][2] + SideAM.MainPiece[2])), 0, 0.5, 0.5)
+		if not (CurrentMode == "Puyo") then
+			love.graphics.draw(MainAM.Image, 28 * MainAM.MainPiece[1] + ScreenX, 714 - (28 * MainAM.MainPiece[2])) --draw the MainPiece of ActiveMinos
+			for MinosNum,v in ipairs(MainAM) do --draw all the other Pieces
+				love.graphics.draw(MainAM.Image, 28 * (MainAM[MinosNum][1] + MainAM.MainPiece[1]) + ScreenX, 714 - (28 * (MainAM[MinosNum][2] + MainAM.MainPiece[2])))
 			end
 			
-			love.graphics.draw(SideGM.Image, 350 + 14 * SideGM.MainPiece[1] + ScreenX, 567 - (14 * SideGM.MainPiece[2]), 0, 0.5, 0.5) --draw the MainPiece of GhostMinos
-			for MinosNum,v in ipairs(SideGM) do --draw all the other Pieces
-				love.graphics.draw(SideGM.Image, 350 + 14 * (SideGM[MinosNum][1] + SideGM.MainPiece[1]) + ScreenX, 567 - (14 * (SideGM[MinosNum][2] + SideGM.MainPiece[2])), 0, 0.5, 0.5)
+			love.graphics.draw(MainGM.Image, 28 * MainGM.MainPiece[1] + ScreenX, 714 - (28 * MainGM.MainPiece[2])) --draw the MainPiece of GhostMinos
+			for MinosNum,v in ipairs(MainGM) do --draw all the other Pieces
+				love.graphics.draw(MainGM.Image, 28 * (MainGM[MinosNum][1] + MainGM.MainPiece[1]) + ScreenX, 714 - (28 * (MainGM[MinosNum][2] + MainGM.MainPiece[2])))
 			end
-		end
-		
-		love.graphics.line(MainTextX, 400, MainTextX + 150, 400, MainTextX + 150, 250, MainTextX, 250, MainTextX, 400)
-		love.graphics.print("Next:", MainTextX + 3, 250)
-		love.graphics.draw(UpComming.Image, MainTextX + 61, 311) --draw the MainPiece of GhostMinos
-		for MinosNum,v in ipairs(UpComming) do --draw all the other Pieces
-			love.graphics.draw(UpComming.Image, (28 * UpComming[MinosNum][1]) + MainTextX + 61, (28 * UpComming[MinosNum][2] * (-1)) + 311)
-		end
-		
-		
-		love.graphics.line(MainTextX, 570, MainTextX + 150, 570, MainTextX + 150, 420, MainTextX, 420, MainTextX, 570)
-		love.graphics.print("Hold:", MainTextX + 3, 420)
-		if HoldSpot.Image then
-			love.graphics.draw(HoldSpot.Image, MainTextX + 61, 481) --draw the MainPiece of HoldSpot
-			for MinosNum,v in ipairs(HoldSpot) do --draw all the other Pieces
-				love.graphics.draw(HoldSpot.Image, (28 * HoldSpot[MinosNum][1]) + MainTextX + 61, (28 * HoldSpot[MinosNum][2] * (-1)) + 481)
+			
+			if CurrentMode == "Swap" then
+				love.graphics.draw(SideAM.Image, 350 + 14 * SideAM.MainPiece[1] + ScreenX, 567 - (14 * SideAM.MainPiece[2]), 0, 0.5, 0.5) --draw the MainPiece of ActiveMinos
+				for MinosNum,v in ipairs(SideAM) do --draw all the other Pieces
+					love.graphics.draw(SideAM.Image, 350 + 14 * (SideAM[MinosNum][1] + SideAM.MainPiece[1]) + ScreenX, 567 - (14 * (SideAM[MinosNum][2] + SideAM.MainPiece[2])), 0, 0.5, 0.5)
+				end
+				
+				love.graphics.draw(SideGM.Image, 350 + 14 * SideGM.MainPiece[1] + ScreenX, 567 - (14 * SideGM.MainPiece[2]), 0, 0.5, 0.5) --draw the MainPiece of GhostMinos
+				for MinosNum,v in ipairs(SideGM) do --draw all the other Pieces
+					love.graphics.draw(SideGM.Image, 350 + 14 * (SideGM[MinosNum][1] + SideGM.MainPiece[1]) + ScreenX, 567 - (14 * (SideGM[MinosNum][2] + SideGM.MainPiece[2])), 0, 0.5, 0.5)
+				end
+			end
+			
+			love.graphics.line(MainTextX, 400, MainTextX + 150, 400, MainTextX + 150, 250, MainTextX, 250, MainTextX, 400)
+			love.graphics.print("Next:", MainTextX + 3, 250)
+			love.graphics.draw(UpComming.Image, MainTextX + 61, 311) --draw the MainPiece of GhostMinos
+			for MinosNum,v in ipairs(UpComming) do --draw all the other Pieces
+				love.graphics.draw(UpComming.Image, (28 * UpComming[MinosNum][1]) + MainTextX + 61, (28 * UpComming[MinosNum][2] * (-1)) + 311)
+			end
+			
+			
+			love.graphics.line(MainTextX, 570, MainTextX + 150, 570, MainTextX + 150, 420, MainTextX, 420, MainTextX, 570)
+			love.graphics.print("Hold:", MainTextX + 3, 420)
+			if HoldSpot.Image then
+				love.graphics.draw(HoldSpot.Image, MainTextX + 61, 481) --draw the MainPiece of HoldSpot
+				for MinosNum,v in ipairs(HoldSpot) do --draw all the other Pieces
+					love.graphics.draw(HoldSpot.Image, (28 * HoldSpot[MinosNum][1]) + MainTextX + 61, (28 * HoldSpot[MinosNum][2] * (-1)) + 481)
+				end
+			end
+		else
+			love.graphics.draw(MainAM.MainPiece.Image, 28 * MainAM.MainPiece[1] + ScreenX, 714 - (28 * MainAM.MainPiece[2])) --draw the MainPiece of ActiveMinos
+			for MinosNum,v in ipairs(MainAM) do --draw all the other Pieces
+				love.graphics.draw(MainAM[MinosNum].Image, 28 * (MainAM[MinosNum][1] + MainAM.MainPiece[1]) + ScreenX, 714 - (28 * (MainAM[MinosNum][2] + MainAM.MainPiece[2])))
+			end
+			
+			love.graphics.draw(MainGM.MainPiece.Image, 28 * MainGM.MainPiece[1] + ScreenX, 714 - (28 * MainGM.MainPiece[2])) --draw the MainPiece of GhostMinos
+			for MinosNum,v in ipairs(MainGM) do --draw all the other Pieces
+				love.graphics.draw(MainGM[MinosNum].Image, 28 * (MainGM[MinosNum][1] + MainGM.MainPiece[1]) + ScreenX, 714 - (28 * (MainGM[MinosNum][2] + MainGM.MainPiece[2])))
+			end
+			
+			if CurrentMode == "Swap" then
+				love.graphics.draw(SideAM.MainPiece.Image, 350 + 14 * SideAM.MainPiece[1] + ScreenX, 567 - (14 * SideAM.MainPiece[2]), 0, 0.5, 0.5) --draw the MainPiece of ActiveMinos
+				for MinosNum,v in ipairs(SideAM) do --draw all the other Pieces
+					love.graphics.draw(SideAM[MinosNum].Image, 350 + 14 * (SideAM[MinosNum][1] + SideAM.MainPiece[1]) + ScreenX, 567 - (14 * (SideAM[MinosNum][2] + SideAM.MainPiece[2])), 0, 0.5, 0.5)
+				end
+				
+				love.graphics.draw(SideGM.MainPiece.Image, 350 + 14 * SideGM.MainPiece[1] + ScreenX, 567 - (14 * SideGM.MainPiece[2]), 0, 0.5, 0.5) --draw the MainPiece of GhostMinos
+				for MinosNum,v in ipairs(SideGM) do --draw all the other Pieces
+					love.graphics.draw(SideGM[MinosNum].Image, 350 + 14 * (SideGM[MinosNum][1] + SideGM.MainPiece[1]) + ScreenX, 567 - (14 * (SideGM[MinosNum][2] + SideGM.MainPiece[2])), 0, 0.5, 0.5)
+				end
+			end
+			
+			love.graphics.line(MainTextX, 400, MainTextX + 150, 400, MainTextX + 150, 250, MainTextX, 250, MainTextX, 400)
+			love.graphics.print("Next:", MainTextX + 3, 250)
+			love.graphics.draw(UpComming.MainPiece.Image, MainTextX + 61, 311) --draw the MainPiece of GhostMinos
+			for MinosNum,v in ipairs(UpComming) do --draw all the other Pieces
+				love.graphics.draw(UpComming[MinosNum].Image, (28 * UpComming[MinosNum][1]) + MainTextX + 61, (28 * UpComming[MinosNum][2] * (-1)) + 311)
+			end
+			
+			
+			love.graphics.line(MainTextX, 570, MainTextX + 150, 570, MainTextX + 150, 420, MainTextX, 420, MainTextX, 570)
+			love.graphics.print("Hold:", MainTextX + 3, 420)
+			if HoldSpot.Image then
+				love.graphics.draw(HoldSpot.MainPiece.Image, MainTextX + 61, 481) --draw the MainPiece of HoldSpot
+				for MinosNum,v in ipairs(HoldSpot) do --draw all the other Pieces
+					love.graphics.draw(HoldSpot[MinosNum].Image, (28 * HoldSpot[MinosNum][1]) + MainTextX + 61, (28 * HoldSpot[MinosNum][2] * (-1)) + 481)
+				end
 			end
 		end
 	end
@@ -1237,8 +1512,10 @@ function love.draw() --drawing function
 		HighscoresTable = Highscores
 	elseif CurrentMode == "Swap" then
 		HighscoresTable = SwapHighscores
-	else
+	elseif CurrentMode == "Hidden" then
 		HighscoresTable = HiddenHighscores
+	else
+		HighscoresTable = PuyoHighscores
 	end
 	
 	--draw more text
@@ -1299,6 +1576,13 @@ function love.draw() --drawing function
 			love.graphics.print({{1, 0.5, 0.5}, "Hidden"}, 553, 213)
 		else
 			love.graphics.print("Hidden", 553, 213)
+		end
+		
+		love.graphics.rectangle("line", 550, 250, 110, 25)
+		if CurrentMode == "Puyo" then
+			love.graphics.print({{1, 0.5, 0.5}, "Puyo"}, 553, 253)
+		else
+			love.graphics.print("Puyo", 553, 253)
 		end
 	end
 	if Status == "Pause" then --if the player is paused
@@ -1370,9 +1654,16 @@ function love.keypressed(K) --function for when player presses a button
 			Move_Right.Activated = true
 		end
 		if Controls[K] == "Hard_Drop" then --when Hard_Drop is pressed
+			local State, Pos = false, false
 			repeat
-			until MainPieceDown(SwapState) --keep moving ActiveMinos down, until it locks
-			ClearLines(SwapState)
+				State, Pos = MainPieceDown(SwapState)
+			until State --keep moving ActiveMinos down, until it locks
+			if CurrentMode ~= "Puyo" then
+				ClearLines(SwapState)
+			else
+				PuyoWaiting = "remove"
+				PuyoWaitState = Pos
+			end
 		end
 		if Controls[K] == "Hold" and not HoldLock then
 			HoldSwitch(SwapState)
@@ -1514,6 +1805,11 @@ function love.mousepressed(x, y, button, istouch, presses) --function for when p
 			if (y > 210 and y < 235) then
 				if button == 1 then
 					CurrentMode = "Hidden"
+				end
+			end
+			if (y > 250 and y < 275) then
+				if button == 1 then
+					CurrentMode = "Puyo"
 				end
 			end
 		end

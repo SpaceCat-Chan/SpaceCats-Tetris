@@ -1,1 +1,1 @@
-Single = 100;Double = 300;Triple = 1200;Tetris = 3200;STetris = 7000;Polarities = 7;ChainLength = 8;
+Single = 100;Double = 300;Triple = 1200;Tetris = 3200;STetris = 7000;Polarities = 5;ChainLength = 8;MaxPolsInPeice = 2;TimerBetweenAction = 200;
