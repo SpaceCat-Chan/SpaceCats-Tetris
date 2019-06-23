@@ -226,20 +226,20 @@ function love.load() --loading function
 		[1] = love.graphics.newImage("Minos/OPieceGhost.png"),
 		[2] = love.graphics.newImage("Minos/SPieceGhost.png"),
 		[3] = love.graphics.newImage("Minos/ZPieceGhost.png"),
-		[4] = love.graphics.newImage("Minos/LPieceGhost.png"),
-		[5] = love.graphics.newImage("Minos/JPieceGhost.png"),
-		[6] = love.graphics.newImage("Minos/TPieceGhost.png"),
-		[7] = love.graphics.newImage("Minos/IPieceGhost.png")
+		[4] = love.graphics.newImage("Minos/JPieceGhost.png"),
+		[5] = love.graphics.newImage("Minos/TPieceGhost.png"),
+		[6] = love.graphics.newImage("Minos/IPieceGhost.png"),
+		[7] = love.graphics.newImage("Minos/LPieceGhost.png")
 	}
 	
 	Puyo = { --setting up a table for easier access
 		[1] = love.graphics.newImage("Minos/OPiece.png"), --set up all of the images
 		[2] = love.graphics.newImage("Minos/SPiece.png"),
 		[3] = love.graphics.newImage("Minos/ZPiece.png"),
-		[4] = love.graphics.newImage("Minos/LPiece.png"),
-		[5] = love.graphics.newImage("Minos/JPiece.png"),
-		[6] = love.graphics.newImage("Minos/TPiece.png"),
-		[7] = love.graphics.newImage("Minos/IPiece.png")
+		[4] = love.graphics.newImage("Minos/JPiece.png"),
+		[5] = love.graphics.newImage("Minos/TPiece.png"),
+		[6] = love.graphics.newImage("Minos/IPiece.png"),
+		[7] = love.graphics.newImage("Minos/LPiece.png")
 	}
 	
 	Blank = love.graphics.newImage("Minos/Blank.png")
