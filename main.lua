@@ -1036,33 +1036,55 @@ function CheckAbove(Row, LocSwapState) --check how many Minos are in the Row and
 	return Count --return Count
 end
 
-function ClearLines(LocSwapState) --Clears all lines, and adds them to the score
-	local Lines = 0 --set up lines counter
-	local SpecLines = {} --set up table
-	for x=1,25 do --loop through all lines
-		local Success = CheckLine(x, LocSwapState) --check each of them
-		if Success then --if the check was succesful
-			Lines = Lines + 1 --add one to Lines
-			SpecLines[x] = true --add the line number to SpecLines
+
+
+--[[
+	Clearlines:
+		a function that checks world and clears all lines that are filled up
+		also adds the correct amounts to the score
+		
+	inputs:
+		LocSwapState: which world to check, either 0 or 1
+		
+	returns:
+		nil
+	
+	Author:
+		SpaceCat~Chan
+]]
+
+function ClearLines(LocSwapState)
+	local Lines = 0
+	local SpecLines = {} --SpecLines is a Temporary table used for storing the lines that are full
+	
+	for x=1,25 do
+		local Success = CheckLine(x, LocSwapState)
+		if Success then
+			Lines = Lines + 1
+			SpecLines[x] = true
 		end
 	end
-	if Lines == 1 then --if Lines is 1
-		Score.Singles = Score.Singles + 1 --add 1 to Singles
+	
+	--this next block adds the correct score to the corresponding score counters
+	if Lines == 1 then
+		Score.Singles = Score.Singles + 1
 		ScoreAmount = ScoreAmount + (ProtSettings.Single * Level)
-	elseif Lines == 2 then --if Lines is 2
-		Score.Doubles = Score.Doubles + 1 --add 1 to Doubles
+	elseif Lines == 2 then
+		Score.Doubles = Score.Doubles + 1
 		ScoreAmount = ScoreAmount + (ProtSettings.Double * Level)
-	elseif Lines == 3 then --if Lines is 3
-		Score.Triples = Score.Triples + 1 --add 1 to Triples
+	elseif Lines == 3 then
+		Score.Triples = Score.Triples + 1
 		ScoreAmount = ScoreAmount + (ProtSettings.Triple * Level)
-	elseif Lines == 4 then --if Lines is 4
-		Score.Tetris = Score.Tetris + 1 --add 1 to Tetrs
+	elseif Lines == 4 then
+		Score.Tetris = Score.Tetris + 1
 		ScoreAmount = ScoreAmount + (ProtSettings.Tetris * Level)
-	elseif Lines == 5 then --if Lines is 5 (Pentominos much?)
-		Score.STetris = Score.STetris + 1 --add 1 to STetrs
+	elseif Lines == 5 then --only possible with PentoMinos
+		Score.STetris = Score.STetris + 1
 		ScoreAmount = ScoreAmount + (ProtSettings.STetris * Level)
 	end
 	
+	
+	--store the correct world in a Temporary variable named SWorld
 	local SWorld = false
 	if LocSwapState == 0 then
 		SWorld = InactiveMinos
@@ -1070,18 +1092,18 @@ function ClearLines(LocSwapState) --Clears all lines, and adds them to the score
 		SWorld = SwapInactiveMinos
 	end
 	
-	for x=25,1,-1 do --loop through all lines from top to bottom
-		if SpecLines[x] ~= nil then --if that line is in SpecLines
-			for y=x,25 do --loop through all Lines above x
-				SWorld[y] = SWorld[y + 1] --replace it with the line above
+	for x=25,1,-1 do --looping through from top to bottom, will cause problems if changed
+		if SpecLines[x] then
+			for y=x,25 do
+				SWorld[y] = SWorld[y + 1]
 			end
-			SWorld[25] = {} --set line 25 to an empty table
-			for y=1,10 do --reset line 25
+			SWorld[25] = {}
+			for y=1,10 do
 				SWorld[25][y] = {}
 			end
 		end
 	end
-	NewGhostPiece(LocSwapState) --remake the ghost peice
+	NewGhostPiece(LocSwapState)
 end
 
 function WriteControlsToFile() --function that writes the controls to a file
