@@ -1011,6 +1011,9 @@ end
 	
 	Author:
 		SpaceCat~Chan
+	
+	Notes:
+		Row is only returned if Boolean is True
 ]]
 
 function CheckLine(Row, LocSwapState)
@@ -1050,24 +1053,24 @@ end
 		SpaceCat~Chan
 ]]
 
-function CheckAbove(Row, LocSwapState) --check how many Minos are in the Row and above the Row
+function CheckAbove(Row, LocSwapState)
 	
-	local SWorld = false
+	local SWorld = false --Temporary variable SWorld Contains the world decided by LocSwapState
 	if LocSwapState == 0 then
 		SWorld = InactiveMinos
 	else
 		SWorld = SwapInactiveMinos
 	end
 	
-	local Count = 0 --set up Count
-	for y=Row,25 do --loop through all Rows above Row, (and including Row)
-		for k,Minos in pairs(SWorld[y]) do --loop through all Minos 
-			if Minos.Image ~= nil then --check if there is something there
-				Count = Count + 1 --add one to Count if there is
+	local Count = 0
+	for y=Row,25 do
+		for k,Minos in pairs(SWorld[y]) do
+			if Minos.Image ~= nil then
+				Count = Count + 1
 			end
 		end
 	end
-	return Count --return Count
+	return Count
 end
 
 
