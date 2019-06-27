@@ -1,6 +1,37 @@
 math.randomseed(os.time()) --set up math.random
 
-function pairsV(tab) --from https://stackoverflow.com/questions/40454472/lua-iterate-over-table-sorted-by-values
+
+--[[
+	main.lua:
+		welcome to the main file
+		everything is basically in here
+		there are some other filesystem
+		mostly settings and such
+	
+	Word Definitions:
+		A "Helper Function" is any function not called by Love2D
+		A "Main Function" is love.update and love.graphics
+		An "Input Function" is a function that handles user input (love.keypressed, love.mousepressed, love.keyreleased)
+	
+	Notes: Almost at 2 000 lines of code, yay
+]]
+
+
+--[[
+	PairsV:
+		a function that loops through a table in order of it's values (in decending order)
+	
+	Input:
+		tab: any table
+	
+	Usage:
+		Used just like pairs and ipairs
+	
+	Author:
+		https://stackoverflow.com/questions/40454472/lua-iterate-over-table-sorted-by-values
+]]
+
+function pairsV(tab)
 	local keys = {}
 	for k in pairs(tab) do
 		keys[#keys + 1] = k
@@ -16,7 +47,22 @@ function pairsV(tab) --from https://stackoverflow.com/questions/40454472/lua-ite
 	end
 end
 
-function DeepCopy(orig) --DeepCopy function
+
+--[[
+	DeepCopy:
+		a function that fully copies a table
+	
+	Input:
+		orig: any table
+	
+	Return:
+		copy: copy of the table
+	
+	Author:
+		http://lua-users.org/wiki/CopyTable
+]]
+
+function DeepCopy(orig)
     local orig_type = type(orig)
     local copy
     if orig_type == 'table' then
@@ -31,7 +77,26 @@ function DeepCopy(orig) --DeepCopy function
     return copy
 end
 
-function sortedKeys(query, sortFunction) --got this from https://stackoverflow.com/questions/19260423/how-to-keep-the-order-of-a-lua-table-with-string-keys
+
+--[[
+	sortedKeys:
+		a function wich you can use to go through a table in alphabetical order
+	
+	Input:
+		query: a table
+		sortFunction (optional): a sorting function
+	
+	Usage:
+		for _,k in ipairs(sortedKeys(table)) do
+			local v = table[k]
+			--code here
+		end
+	
+	Author:
+		https://stackoverflow.com/questions/19260423/how-to-keep-the-order-of-a-lua-table-with-string-keys
+]]
+
+function sortedKeys(query, sortFunction)
   local keys, len = {}, 0
   for k,_ in pairs(query) do
     len = len + 1
@@ -41,7 +106,22 @@ function sortedKeys(query, sortFunction) --got this from https://stackoverflow.c
   return keys
 end
 
-function FormatNumber(input) --got this from https://www.gammon.com.au/forum/bbshowpost.php?bbsubject_id=8541
+
+--[[
+	FormatNumber:
+		takes an number as input and returns a formated string
+	
+	Input:
+		input: any number
+	
+	Return:
+		String: a formatted version of input(Input)
+	
+	Author:
+		https://www.gammon.com.au/forum/bbshowpost.php?bbsubject_id=8541
+]]
+
+function FormatNumber(input)
 	if input > 1000 then
 		local result = string.gsub(tostring(input), "(%d)(%d%d%d)$", "%1,%2", 1)
 		while true do
