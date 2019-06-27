@@ -996,25 +996,59 @@ function FindChain(Pos, LocSwapState, Table, Type)
 	end
 end
 
-function CheckLine(Row, LocSwapState) --checks a line and returns if it is full or not
+
+--[[
+	CheckLine;
+		Checks a line and return wether or not it is full or not
 	
-	local SWorld = false
+	Input:
+		Row: Line Number
+		LocSwapState: the number of the world to check
+	
+	Return:
+		Boolean: wether or not the checked line is full or not
+		Row: Row(Input)
+	
+	Author:
+		SpaceCat~Chan
+]]
+
+function CheckLine(Row, LocSwapState)
+	
+	local SWorld = false --Temporary variable SWorld contains the world decided by LocSwapState
 	if LocSwapState == 0 then
 		SWorld = InactiveMinos
 	else
 		SWorld = SwapInactiveMinos
 	end
 	
-	local Count = 0 --set up Count Value
-	for k,v in pairs(SWorld[Row]) do --loop through all Minos in the Row
-		if v.Image ~= nil then --check if they have something in them
-			Count = Count + 1 --add one to Count if they do
+	local Count = 0
+	for k,v in pairs(SWorld[Row]) do
+		if v.Image ~= nil then
+			Count = Count + 1
 		end
 	end
-	if Count == 10 then --if Count is 10
-		return true, Row --return true and Row number
+	
+	if Count == 10 then
+		return true, Row
 	end
 end
+
+
+--[[
+	CheckAbove:
+		Checks the amount of Minos that are above a certain point
+	
+	Input:
+		Row: the Line to check above (also checks Row)
+		LocSwapState: the world to check in
+	
+	Return:
+		Count: amount of Minos above Row(Input)
+	
+	Author:
+		SpaceCat~Chan
+]]
 
 function CheckAbove(Row, LocSwapState) --check how many Minos are in the Row and above the Row
 	
@@ -1043,10 +1077,10 @@ end
 		a function that checks world and clears all lines that are filled up
 		also adds the correct amounts to the score
 		
-	inputs:
+	Input:
 		LocSwapState: which world to check, either 0 or 1
 		
-	returns:
+	Return:
 		nil
 	
 	Author:
