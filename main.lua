@@ -13,7 +13,7 @@ math.randomseed(os.time()) --set up math.random
 		A "Main Function" is love.update and love.graphics
 		An "Input Function" is a function that handles user input (love.keypressed, love.mousepressed, love.keyreleased)
 	
-	Notes: Almost at 2 000 lines of code, yay
+	Notes: 2000 lines YAY
 ]]
 
 
@@ -134,6 +134,21 @@ function FormatNumber(input)
 	end
 end
 
+
+--[[
+	SetUpWorld:
+		Sets up both worlds so they are ready for use
+	
+	Input:
+		nil
+	
+	Return:
+		nil
+	
+	Author:
+		SpaceCat~Chan
+]]
+
 function SetUpWorld() --Create all the slots that Minos can be in
 	InactiveMinos = {}
 	SwapInactiveMinos = {}
@@ -146,6 +161,21 @@ function SetUpWorld() --Create all the slots that Minos can be in
 		end
 	end
 end
+
+
+--[[
+	love.load:
+		function that is run when the game is loaded
+	
+	Input:
+		N/A
+	
+	Return:
+		N/A
+	
+	Author:
+		N/A (Shared)
+]]
 
 function love.load() --loading function
 	
