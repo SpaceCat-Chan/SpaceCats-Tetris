@@ -462,7 +462,7 @@ function HoldSwitch()
 	if SwapState == 0 then
 		ACMinos = ActiveMinos
 	else
-		AcMinos = SwapActiveMinos
+		ACMinos = SwapActiveMinos
 	end
 	
 	if HoldSpot.Image == nil then
