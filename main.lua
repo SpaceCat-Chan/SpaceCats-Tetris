@@ -5,7 +5,7 @@ math.randomseed(os.time()) --set up math.random
 	main.lua:
 		welcome to the main file
 		everything is basically in here
-		there are some other filesystem
+		there are some other files
 		mostly settings and such
 	
 	Word Definitions:
@@ -19,7 +19,7 @@ math.randomseed(os.time()) --set up math.random
 
 --[[
 	PairsV:
-		a function that loops through a table in order of it's values (in decending order)
+		a function that loops through a table in order of it's values (in descending order)
 	
 	Input:
 		tab: any table
@@ -80,7 +80,7 @@ end
 
 --[[
 	sortedKeys:
-		a function wich you can use to go through a table in alphabetical order
+		a function which you can use to go through a table in alphabetical order
 	
 	Input:
 		query: a table
@@ -280,7 +280,7 @@ function love.load() --loading function
 	
 	Status = "Menu" --set up status screen
 	ActiveMinos = {} --set up ActiveMinos Table
-	SwapActiveMinos = {} --set up active minos for the swap mode
+	SwapActiveMinos = {} --set up active Minos for the swap mode
 	SwapState = 0
 	MovTimer = 0
 	SwapMovTimer = 0
@@ -359,7 +359,7 @@ function love.load() --loading function
 		Image = Images.OPieceImage, --an image
 		CurrentRotation = 0, --some rotation info
 		MainPiece = {0,0}, --the Main Minos
-		[1] = {1,0}, --three other Minos, all of their cordinates are relative to the Main Minos
+		[1] = {1,0}, --three other Minos, all of their coordinates are relative to the Main Minos
 		[2] = {0,1},
 		[3] = {1,1}
 	}
@@ -417,7 +417,7 @@ function love.load() --loading function
 		Image = Images.OPieceImage, --an image
 		CurrentRotation = 0, --some rotation info
 		MainPiece = {0,0}, --the Main Minos
-		[1] = {1,0}, --FOUR other Minos, all of their cordinates are relative to the Main Minos
+		[1] = {1,0}, --FOUR other Minos, all of their coordinates are relative to the Main Minos
 		[2] = {0,1},
 		[3] = {1,1},
 		[4] = {0,-1}
@@ -566,13 +566,28 @@ function love.load() --loading function
 	SetUpWorld() --set up world for drawing reasons
 end
 
+
+--[[
+	HoldSwitch:
+		a function that switches the contents of ACMinos and HoldSpot
+	
+	Input:
+		nil
+	
+	Return:
+		nil
+	
+	Author:
+		SpaceCat~Chan
+]]
+
 function HoldSwitch()
 	
-	local ACMinos = false
-	if SwapState == 0 then
+	local ACMinos = false --ACMinos as a Temporary variable that contains the correct version of ActiveMinos
+	if SwapState == 0 then --instead of using LocSwapState like we usually do, instead we use SwapState, which is the global variable version of LocSwapState
 		ACMinos = ActiveMinos
 	else
-		AcMinos = SwapActiveMinos
+		ACMinos = SwapActiveMinos
 	end
 	
 	if HoldSpot.Image == nil then
@@ -585,23 +600,41 @@ function HoldSwitch()
 		end
 		HoldSpot.MainPiece[1] = 6
 	else
-		if SwapState == 0 then
+		if SwapState == 0 then --reason we are not using ACMinos is that this specific thing is not possible with ACMinos
 			HoldSpot, ActiveMinos = ActiveMinos, HoldSpot
 		else
 			HoldSpot, SwapActiveMinos = SwapActiveMinos, HoldSpot
 		end
+		
 		if HoldSpot.Image == TetrominoList.IPeice.Image then
 			HoldSpot.MainPiece[2] = 23
 		else
 			HoldSpot.MainPiece[2] = 24
 		end
+		
 		HoldSpot.MainPiece[1] = 6
 		NewGhostPiece(SwapState)
 	end
 	HoldLock = true
 end
 
-function FindTranslation(A,B) --finds the translations between two offsets (https://tetris.wiki/SRS)
+
+--[[
+	FindTranslation:
+		takes two offsets and finds the corresponding translation between them
+	
+	Input:
+		A: an offset
+		B: an offset
+	
+	Return
+		Translation: the translation between A and B
+	
+	Author:
+		SpaceCat~Chan
+]]
+
+function FindTranslation(A,B)
 	local Translation = {}
 	for k,v in ipairs(A) do
 		Translation[k] = {v[1] - B[k][1], v[2] - B[k][2]}
@@ -609,7 +642,23 @@ function FindTranslation(A,B) --finds the translations between two offsets (http
 	return Translation
 end
 
-function RotateAroundCenter(Pos,Dir) --rotates a pair of cordinates around the center point (0,0), Dir: False == Clockwise, True == Counter Clockwise
+
+--[[
+	RotateAroundCenter:
+		rotates a point around {0,0} and return the result
+	
+	Input:
+		Pos: Point to rotate
+		Dir: direction to rotate in, False == Clockwise, True == Counter Clockwise
+	
+	Return:
+		Point: the rotated point
+	
+	Author:
+		SpaceCat~Chan
+]]
+
+function RotateAroundCenter(Pos,Dir)
 	if Dir then
 		return {Pos[2] * (-1), Pos[1], Image = Pos.Image}
 	else
@@ -617,13 +666,45 @@ function RotateAroundCenter(Pos,Dir) --rotates a pair of cordinates around the c
 	end
 end
 
-function FindKey(Table, Value) --function that finds a value in a table, and returns the key
+
+--[[
+	FindKey:
+		finds a key in a table, given the value that the key contains
+	
+	Input:
+		Table: a table
+		Value: value to search for in Table
+	
+	Return:
+		k: the key that contains Value(Input)
+	
+	Author:
+		SpaceCat~Chan
+]]
+
+function FindKey(Table, Value)
 	for k,v in pairs(Table) do
 		if v == Value then
 			return k
 		end
 	end
 end
+
+
+--[[
+	CopyList:
+		copies a list, just like DeepCopy, but keeps the Image variable of all the things inside intact
+		mostly used for copying PentominoList and TetrominoList
+	
+	Input:
+		List: table to copy
+	
+	Return:
+		Copy: the copy of List(Input)
+	
+	Author:
+		SpaceCat~Chan
+]]
 
 function CopyList(List)
 	local Copy = DeepCopy(List)
@@ -633,11 +714,27 @@ function CopyList(List)
 	return Copy
 end
 
-function SetActiveMinos(LocSwapState) --put a random Tetrominos in ActiveMinos
+
+--[[
+	SetActiveMinos:
+		sets ActiveMinos (or SwapActiveMinos) to a random Piece
+	
+	Input:
+		LocSwapState: the ActiveMinos to use
+	
+	Return:
+		nil
+	
+	Author:
+		SpaceCat~Chan
+]]
+
+function SetActiveMinos(LocSwapState)
 	local Test = false
 	repeat
-		local TakeList = {}
-		if Settings.Pentominos == "false" then --logic for pentominos
+		
+		local TakeList = {} --TakeList is a Temporary variable containing the List (TetrominoList or PentominoList) to take Pieces from
+		if Settings.Pentominos == "false" then
 			TakeList = CopyList(TetrominoList)
 		elseif Settings.Pentominos == "true" then
 			TakeList = CopyList(PentominoList)
@@ -649,25 +746,29 @@ function SetActiveMinos(LocSwapState) --put a random Tetrominos in ActiveMinos
 				TakeList = CopyList(PentominoList)
 			end
 		end
-		local TetrominoID = math.random(7) --random number
-		local I = 1 --start number
-		local Final = false --PlaceHolder value
-		for k,v in pairs(TakeList) do --go through all Tetrominos
-			if I == TetrominoID then --check if we are on the correct Tetrominos yet
-				local ImagePlaceHolder = v.Image --store Image to a PlaceHolder
-				Final = DeepCopy(v) --copy Tetrominos to PlaceHolder value
-				Final.Image = ImagePlaceHolder --paste it into Final
-				break --exit for loop
+		
+		
+		local TetrominoID = math.random(7)
+		local I = 1
+		local Final = false --Final is yet another Temporary variable containing the selected Piece
+		for k,v in pairs(TakeList) do
+			if I == TetrominoID then
+				local ImagePlaceHolder = v.Image
+				Final = DeepCopy(v)
+				Final.Image = ImagePlaceHolder
+				break
 			end
 			I = I + 1
 		end
-		if Final.Image == Images.IPieceImage then --check if Final is an IPiece
-			Final.MainPiece = {6,23} --if it is set the position to a special position
+		
+		
+		if Final.Image == Images.IPieceImage then
+			Final.MainPiece = {6,23}
 		else
-			Final.MainPiece = {6,24} --set up position of Tetrominos
+			Final.MainPiece = {6,24}
 		end
 		
-		if CurrentMode == "Puyo" then
+		if CurrentMode == "Puyo" then --we need to do some extra things if the mode is Puyo, specifically: give each Minos in Final it's own color
 			local Types = {}
 			for num=1,ProtSettings.MaxPolsInPeice do
 				table.insert(Types, math.random(ProtSettings.Polarities))
@@ -679,23 +780,40 @@ function SetActiveMinos(LocSwapState) --put a random Tetrominos in ActiveMinos
 		end
 		
 		if LocSwapState == 0 then
-			ActiveMinos = UpComming --copy UpComming to ActiveMinos
+			ActiveMinos = UpComming
 		else
-			SwapActiveMinos = UpComming --or to SwapActiveMinos, depends really
+			SwapActiveMinos = UpComming
 		end
-		UpComming = Final --copy PlaceHolder to UpComming
+		UpComming = Final
 		
-		if LocSwapState == 0 then
+		if LocSwapState == 0 then --we need to copy ACMinos.MainPiece to Test so we can see if it is nil or not
 			Test = ActiveMinos.MainPiece
 		else
 			Test = SwapActiveMinos.MainPiece
 		end
 		
-	until Test --repeat if ActiveMinos is empty
-	NewGhostPiece(LocSwapState) --make the ghost image
+	until Test
+	NewGhostPiece(LocSwapState)
 end
 
-function CheckOverlap(Pos, LocSwapState) --function to check if a spot is occypied by another Minos
+
+--[[
+	CheckOverlap:
+		Checks a specific spot to see if it a valid spot to put a Minos (aka it is not out of bounds and it is not already used up)
+	
+	Input:
+		Pos: position to check
+		LocSwapState: which world to check
+	
+	Return:
+		Boolean: true if the spot is filled
+		Type: if we are in Puyo mode and there is something there, then it will also return the type of the thing there
+	
+	Author:
+		SpaceCat~Chan
+]]
+
+function CheckOverlap(Pos, LocSwapState)
 	
 	local SWorld = false
 	if LocSwapState == 0 then
@@ -708,8 +826,8 @@ function CheckOverlap(Pos, LocSwapState) --function to check if a spot is occypi
 		if SWorld[Pos[2]] == nil then
 			return true
 		end
-		if SWorld[Pos[2]][Pos[1]] == nil then --if spot is not empty or out of boundry
-			return true --return true
+		if SWorld[Pos[2]][Pos[1]] == nil then
+			return true
 		end
 		if SWorld[Pos[2]][Pos[1]].Image ~= nil then
 			if CurrentMode == "Puyo" then
@@ -719,16 +837,29 @@ function CheckOverlap(Pos, LocSwapState) --function to check if a spot is occypi
 				return true
 			end
 		end
-	else
-		if SWorld[1] == nil then
+	else --sometimes the position checked is above the world, if it above the world do not count that as out of bounds
+		if SWorld[1][Pos[1]] == nil then
 			return true
 		end
-		if SWorld[1][Pos[1]] == nil then --if spot is not empty or out of boundry
-			return true --return true
-		end
 	end
-	return false --else return false
-end --return true, if spot is out of boundry, or it is not empty
+	return false
+end
+
+
+--[[
+	RotateMain:
+		rotates ActiveMinos (or SwapActiveMinos)
+	
+	Input:
+		Dir: the direction to rotate, False == Clockwise, True == Counter Clockwise
+		LocSwapState: the ActiveMinos to use
+	
+	Return:
+		nil
+	
+	Author:
+		SpaceCat~Chan
+]]
 
 function RotateMain(Dir, LocSwapState) --Function that rotates ActiveMinos, Dir: False == Clockwise, True == Counter Clockwise
 	
