@@ -19,6 +19,8 @@ this is written in Lua and uses Love2D for doing graphics
 ### Linux:
 1. download Tetris.love from Linux executable
 
-2. do magic (you probably just need to open Tetris.love, i don't know i am new to Linux)
+2. install Love2D (you should be able to use apt-get, else you can get from here https://love2d.org/)
+
+3. open Tetris.love
 
 3. enjoy
